@@ -10,4 +10,4 @@ class Token:
         return Token(string, string, "invalid", location)
     
     def __str__(self):
-        return f"<{self.type} token: \"{self.string}\" at {str(self.location)}>"
+        return f"<{self.type} token: \"{'<space>' if self.string.isspace() else self.string}\" at {str(self.location)}>"
