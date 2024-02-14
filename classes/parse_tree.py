@@ -32,13 +32,23 @@ class ParseTree:
         execution = self.parse()
         if type(execution) == list:
             for i in execution:
-                print("Yeah!")
                 i.evaluate()
                 #print(i.evaluate())
         else:
             return execution.evaluate()
 
-    def parse(self) -> Expression:
+    def parse(self, **kwargs) -> Expression:
+        params = {
+            "combine": True,
+            "inParen": False,
+            **kwargs
+        }
+
+        def submit_exp (type, op, args):
+            result = self.look_ahead(Expression(type, op, self.variables, args), **params)
+            self.next_token()
+            return result
+
         while self.curr_token() != None:
             token = self.curr_token()
             match token.type:
@@ -53,36 +63,33 @@ class ParseTree:
                             case "statement":
                                 self.next_token()
                                 if self.expect("(") >= 0:
-                                    exp.args.append(Expression("parentheses", "parentheses", self.variables, [self.parse()]))
-                                    self.next_token()
+                                    exp.args.append(submit_exp("parentheses", "parentheses", [self.parse(combine=False)]))
                                     if self.expect("{") >= 0:
-                                        exp.args.append(Expression("contents", "contents", self.variables, [self.parse()]))
+                                        exp.args.append(submit_exp("contents", "contents", [self.parse(combine=False)]))
+                                        return self.look_ahead(exp)
                                     else:
-                                        return self.look_ahead(Expression("statement", exp.operation, self.variables, exp.args[0]))
+                                        return submit_exp("statement", exp.operation, exp.args[0])
                                 else:
-                                    return self.look_ahead(Expression("literal", "type", self.variables, ["weapon"]))
+                                    return submit_exp("literal", "type", ["weapon"])
                             case "literal":
-                                return exp
+                                return self.look_ahead(exp)
                             case "binary":
                                 self.errors.append(f"Thy left hand hath been lopped off at {token.location}!")
 
                     
                     self.next_token()
                     if self.expect("(") >= 0:
-                        return self.look_ahead(Expression("statement", word, self.variables, [self.parse()]))
-                    return self.look_ahead(Expression("variable", "variable", self.variables, [word]))
+                        return submit_exp("statement", word, [self.parse(combine=False)])
+                    return submit_exp("variable", "variable", [word])
 
                 case "mathynum":
-                    self.next_token()
-                    return self.look_ahead(Expression("literal", "mathynum", self.variables, [token.value]))
+                    return submit_exp("literal", "mathynum", [token.value])
                 
                 case "num":
-                    self.next_token()
-                    return self.look_ahead(Expression("literal", "num", self.variables, [token.value]))
+                    return submit_exp("literal", "num", [token.value])
                 
                 case "booboo":
-                    self.next_token()
-                    return self.look_ahead(Expression("literal", "booboo", self.variables, [token.value]))
+                    return submit_exp("literal", "booboo", [token.value])
                 
                 case "quote":
                     value = ""
@@ -90,19 +97,18 @@ class ParseTree:
                         value += self.curr_token().string
                     if self.curr_token() == None:
                         self.errors.append(f"Thou canst not defeat thine opponent lest thou finish thine battle cry at {token.location}!")
-                    self.next_token()
-                    return self.look_ahead(Expression("literal", "blah", self.variables, [value]))
+                    return submit_exp("literal", "blah", [value])
                 
                 case "open parenthesis":
                     self.matching.append(token)
                     self.next_token()
-                    exp = Expression("parentheses", "parentheses", self.variables, self.parse())
+                    exp = Expression("parentheses", "parentheses", self.variables, self.parse(inParen=True))
                     if self.expect(")") >= 0:
                         self.pointer += self.expect(")") + 1
-                        return self.look_ahead(exp)
+                        return submit_exp(exp.type, exp.operation, exp.args)
                     
                     self.errors.append(f"Thou hast a hole in thy container at {token.location}!")
-                    return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
+                    return submit_exp("invalid", "invalid", [])
 
                 case "close parenthesis":
                     self.errors.append(f"Thou mayest not finish what thou hast not started! Thou didst not open the container at {token.location}!")
@@ -156,8 +162,8 @@ class ParseTree:
             self.errors.append(mismatch_err)
         return -1
 
-    def look_ahead(self, expression):
-        if self.expect(",") >= 0:
+    def look_ahead(self, expression, **kwargs):
+        if kwargs["combine"] and self.expect(",") >= 0:
             self.pointer += self.expect(",") + 1
             addition = self.parse()
             return [expression] + (addition if type(addition) == list else [addition])
