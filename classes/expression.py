@@ -17,7 +17,7 @@ class Expression:
                 result = []
                 for arg in self.args:
                     result.append(arg)
-                return result
+                return purge_nones(result)
             case "contents":
                 pass
             case "indexer":
@@ -48,6 +48,9 @@ class Expression:
                         return total
             case "invalid":
                 pass
+            case "empty":
+                # Just evaluates to None
+                return None
             case _:
                 raise "Invalid expression type!"
             
@@ -58,7 +61,7 @@ class Expression:
                 chain[i] = self.unpack_expression_chain(chain[i])
         elif type(chain) == Expression:
             return chain.evaluate()
-        return unpack_list(chain)
+        return purge_nones(unpack_list(chain))
                     
 def execute(function, args):
     match function:
@@ -86,4 +89,9 @@ def unpack_list(packed_list):
             packed_list = packed_list[0]
         for i in packed_list:
             unpack_list(i)
+    return packed_list
+
+def purge_nones(packed_list):
+    if (type(packed_list) == list):
+        return [purge_nones(i) for i in packed_list if i != None]
     return packed_list
