@@ -112,4 +112,22 @@ def execute(function, args):
             else:
                 raise "Invalid type!"
         case "tellme":
+            if args != None and type(args) == list and len(args) > 0:
+                print(args[0])
             return input()
+        case "counter":
+            args = str(args[0])
+            result = ""
+            for i in args[::-1]:
+                result += i
+            return result
+        case "again":
+            return args[0] * args[1]
+        case "blah":
+            return str(args[0])
+        case "num":
+            return int(args[0])
+        case "mathynum":
+            return float(args[0])
+        case "by":
+            return args[0] * args[1]

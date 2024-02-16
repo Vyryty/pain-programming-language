@@ -46,7 +46,6 @@ class ParseTree:
         default_params = {
             "combine": True,
             "inParen": False,
-            "acceptEmpty": False,
         }
         params = {
             **default_params,
@@ -97,8 +96,20 @@ class ParseTree:
                                 self.errors.append(f"Thy left hand hath been lopped off at {token.location}!")
 
                     if self.expect("(") >= 0:
-                        return submit_parse_exp("statement", word, combine=False, acceptEmpty=True)
+                        return submit_parse_exp("statement", word, combine=False)
                     return submit_exp("variable", "variable", [word])
+
+                # case "plus":
+                #     pass
+            
+                # case "dash":
+                #     pass
+
+                # case "star":
+                #     pass
+
+                # case "slash":
+                #     pass
 
                 case "mathynum":
                     return submit_exp("literal", "mathynum", [token.value])
@@ -152,7 +163,6 @@ class ParseTree:
             case _:
                 return None
 
-        #print(exp[-1].args[-1].type)
         if exp != None and len(exp) > 0 and (exp[-1] == None or (len(exp[-1].args) > 0 and (exp[-1].args[-1] == None or exp[-1].args[-1].type == "empty"))):
             print("Empty!")
             self.pointer -= 1

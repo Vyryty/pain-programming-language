@@ -32,6 +32,10 @@ class Lexer:
                     word += string[index]
                     index += 1
                 
+                if decimal and len(word) <= 1:
+                    tokens.append(Token.invalid_token(".", Location(line_number, index + 1, 1, file)))
+                    continue
+                
                 if index < len(string) and string[index] == "." and not decimal:
                     decimal = True
                     word += string[index]

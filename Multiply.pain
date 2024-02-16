@@ -1,0 +1,8 @@
+cry("Welcome to the multiplier!"),
+cry(
+    "Your answer is:",
+    by(
+        mathynum(tellme("Input the first term!")),
+        mathynum(tellme("Input the second term!"))
+    )
+)
