@@ -64,7 +64,6 @@ def unpack_expression_chain(chain):
             chain[i] = unpack_expression_chain(elem)
     elif type(chain) == Expression:
         unpack_expression_chain(chain.args)
-        # return chain.evaluate()
         return chain
     return purge_nones(unpack_list(chain))
 
@@ -108,5 +107,9 @@ def execute(function, args):
                 return "mathynum"
             elif type(args) == str:
                 return "blah"
+            elif type(args) == type(execute):
+                return "weapon"
             else:
                 raise "Invalid type!"
+        case "tellme":
+            return input()

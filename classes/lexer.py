@@ -130,17 +130,17 @@ class Lexer:
                                             "close curly brace",
                                             Location(line_number, index + 1, 1, file)))
                         index += 1
-                    case "[":
-                        tokens.append(Token(string[index],
-                                            string[index],
-                                            "open square bracket",
-                                            Location(line_number, index + 1, 1, file)))
-                        index += 1
-                    case "]":
-                        tokens.append(Token(string[index],
-                                            string[index],
-                                            "close square bracket",
-                                            Location(line_number, index + 1, 1, file)))
+                    # case "[":
+                    #     tokens.append(Token(string[index],
+                    #                         string[index],
+                    #                         "open square bracket",
+                    #                         Location(line_number, index + 1, 1, file)))
+                    #     index += 1
+                    # case "]":
+                    #     tokens.append(Token(string[index],
+                    #                         string[index],
+                    #                         "close square bracket",
+                    #                         Location(line_number, index + 1, 1, file)))
                     case ",":
                         tokens.append(Token(string[index],
                                             string[index],

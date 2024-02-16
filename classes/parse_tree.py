@@ -46,6 +46,7 @@ class ParseTree:
         default_params = {
             "combine": True,
             "inParen": False,
+            "acceptEmpty": False,
         }
         params = {
             **default_params,
@@ -96,7 +97,7 @@ class ParseTree:
                                 self.errors.append(f"Thy left hand hath been lopped off at {token.location}!")
 
                     if self.expect("(") >= 0:
-                        return submit_parse_exp("statement", word, combine=False)
+                        return submit_parse_exp("statement", word, combine=False, acceptEmpty=True)
                     return submit_exp("variable", "variable", [word])
 
                 case "mathynum":
@@ -118,63 +119,68 @@ class ParseTree:
                         self.errors.append(f"Thou canst not defeat thine opponent lest thou finish thine battle cry at {token.location}!")
                     return submit_exp("literal", "blah", [value])
                 
-                case "open parenthesis":
-                    exp = submit_parse_exp("parentheses", "parentheses", inParen=True)
-                    close = self.expect(")", ",", forward=False)
-                    if close >= 0:
-                        self.pointer += close + 1
-                        return exp
-                    
-                    self.errors.append(f"Thou hast a hole in thy container at {token.location}!")
-                    return submit_invalid()
-
-                case "close parenthesis":
-                    if params["inParen"] and params["combine"]:
-                        #self.pointer -= 1
-                        print("Found close parenthesis at token", self.pointer, "location:", token.location.column)
-                        #self.next_token()
-                        return submit_empty()
-                    
-                    self.errors.append(f"Thou mayest not finish what thou hast not started! Thou didst not open the container at {token.location}!")
-                    return submit_invalid()
-                        
-                case "open curly brace":
-                    self.next_token()
-                    exp = Expression("contents", "contents", self.variables, self.parse())
-                    if self.expect("}") >= 0:
-                        self.pointer += self.expect("}") + 1
-                        return exp
-                    
-                    self.errors.append(f"Thou hast a hole in thy container at {token.location}!")
-                    return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
-                
-                case "close curly brace":
-                    self.errors.append(f"Thou mayest not finish what thou hast not started! Thou didst not open the container at {token.location}!")
-                    return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
-                
-                case "open square bracket":
-                    self.next_token()
-                    exp = Expression("contents", "contents", self.variables, self.parse())
-                    if self.expect("]") >= 0:
-                        self.pointer += self.expect("]") + 1
-                        return exp
-                    
-                    self.errors.append(f"Thou hast a hole in thy container at {token.location}!")
-                    return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
-
                 case "comma":
                     self.errors.append(f"Thou countest thine commas before they hatch at {token.location}!")
                     return submit_invalid()
 
                 case "whitespace":
                     self.next_token()
+                
                 case _:
+                    container = self.open_container(token, submit_parse_exp, submit_invalid)
+                    if container != None:
+                        return container
+                    container = self.close_container(token, submit_empty, submit_invalid, **params)
+                    if container != None:
+                        return container
+
                     self.errors.append(f"Canst thou not read? What thinkest thou of \"{self.curr_token().string}\" at {self.curr_token().location}?")
                     return submit_invalid()
                 
         return None
     
-    def expect(self, expected, ignore: str = "", forward = True) -> bool:
+    def open_container(self, token, submit_parse_exp, submit_invalid):
+        exp = None
+        match = ""
+        match token.type:
+            case "open parenthesis":
+                exp = submit_parse_exp("parentheses", "parentheses", inParen=True)
+                match = ")"
+            case "open curly brace":
+                exp = submit_parse_exp("contents", "contents", inParen=True)
+                match = "}"
+            case _:
+                return None
+
+        #print(exp[-1].args[-1].type)
+        if exp != None and len(exp) > 0 and (exp[-1] == None or (len(exp[-1].args) > 0 and (exp[-1].args[-1] == None or exp[-1].args[-1].type == "empty"))):
+            print("Empty!")
+            self.pointer -= 1
+
+        close = self.expect(match, ",", forward=False)
+        if close >= 0:
+            self.pointer += close + 1
+            return exp
+        
+        self.errors.append(f"Thou hast a hole in thy container at {token.location}!")
+        return submit_invalid()
+    
+    def close_container(self, token, submit_empty, submit_invalid, **params):
+        match token.type:
+            case "close parenthesis":
+                pass
+            case "close curly brace":
+                pass
+            case _:
+                return None
+
+        if params["inParen"] and params["combine"]:
+            return submit_empty()
+        
+        self.errors.append(f"Thou mayest not finish what thou hast not started! Thou didst not open the container at {token.location}!")
+        return submit_invalid()
+
+    def expect(self, expected, ignore: str = "", forward = True) -> int:
         forward = 1 if forward else 0
         while self.peek(forward) != None and ((self.peek(forward).type == "whitespace") or (self.peek(forward).string in ignore)):
             forward += 1
@@ -184,18 +190,26 @@ class ParseTree:
         #print("Wanted:", expected, "At:", self.peek(forward).location.column, "( Forward:", forward, ") Got:", self.peek(forward).string)
         return -1
 
+    def expect_one(self, expected: str, ignore: str = "", forward = True) -> tuple[str, int]:
+        for i in expected:
+            index = self.expect(i, ignore, forward)
+            if index >= 0:
+                return i, index
+        return None, -1
+
     def look_ahead(self, expression, **kwargs):
-        if expression.operation == "cry":
-            print("Submitting cry at:", self.curr_token().location.column, "Token #:", self.pointer)
-            print("Current token:", self.curr_token().type)
-            print("Combining:", kwargs["combine"])
-            print("Next token:", self.peek(1).type)
         comma = self.expect(",", forward=False)
         if kwargs["combine"] and comma >= 0:
-            print("Combining at:", self.curr_token().location.column)
             self.pointer += comma + 1
             addition = self.parse(**kwargs)
             return [expression] + (addition if type(addition) == list else [addition])
+        
+        op = self.expect_one("+-*/", forward=False)
+        if kwargs["combine"] and op[1] >= 0:
+            print("Found", op[0])
+            addition = self.parse(**kwargs)
+            return [expression] + (addition if type(addition) == list else [addition])
+        
         return [expression]
 
 keywords = {
