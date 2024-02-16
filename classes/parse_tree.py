@@ -124,7 +124,7 @@ class ParseTree:
                         return submit_empty()
                     
                     self.errors.append(f"Thou mayest not finish what thou hast not started! Thou didst not open the container at {token.location}!")
-                    return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
+                    return submit_invalid()
                         
                 case "open curly brace":
                     self.matching.append(token)
@@ -153,14 +153,14 @@ class ParseTree:
                     return self.look_ahead(Expression("invalid", "invalid", self.variables, []))
 
                 case "comma":
-                    self.next_token()
                     self.errors.append(f"Thou countest thine commas before they hatch at {token.location}!")
+                    return submit_invalid()
 
                 case "whitespace":
                     self.next_token()
                 case _:
                     self.errors.append(f"Canst thou not read? What thinkest thou of \"{self.curr_token().string}\" at {self.curr_token().location}?")
-                    self.next_token()
+                    return submit_invalid()
                 
         return None
     
