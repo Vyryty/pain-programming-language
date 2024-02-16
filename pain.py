@@ -1,5 +1,5 @@
 from classes.lexer import Lexer
-from classes.parser import Parser
+from classes.parse_tree import ParseTree
 import tkinter.filedialog as fd
 from os import getcwd
 
@@ -18,4 +18,7 @@ with open(file_name, "r") as file:
 # for token in tokens:
 #     print(str(token))
 
-parser = Parser.parse(tokens, errors)
+parser = ParseTree(tokens, errors)
+parser.print_tree()
+parser.evaluate()
+parser.print_errors()

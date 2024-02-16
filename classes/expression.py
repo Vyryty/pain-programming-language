@@ -3,19 +3,19 @@ class Expression:
         self.type = type
         self.operation = operation
         self.vars = vars
-        self.args = args
+        self.args = unpack_expression_chain(args)
 
     def evaluate(self):
-        self.args = self.unpack_expression_chain(self.args)
+        args = evaluate_children(self.args)
 
         match self.type:
             case "literal":
                 return self.args[0]
             case "statement":
-                return execute(self.operation, self.args)
+                return execute(self.operation, args)
             case "parentheses":
                 result = []
-                for arg in self.args:
+                for arg in args:
                     result.append(arg)
                 return purge_nones(result)
             case "contents":
@@ -28,22 +28,22 @@ class Expression:
                 match self.operation:
                     case "+":
                         total = 0
-                        for arg in self.args:
+                        for arg in args:
                             total += arg
                         return total
                     case "-":
                         total = 0
-                        for arg in self.args:
+                        for arg in args:
                             total -= arg
                         return total
                     case "*":
                         total = 1
-                        for arg in self.args:
+                        for arg in args:
                             total *= arg
                         return total
                     case "/":
-                        total = self.args[0] ** 2
-                        for arg in self.args:
+                        total = args[0] ** 2
+                        for arg in args:
                             total /= arg
                         return total
             case "invalid":
@@ -51,18 +51,46 @@ class Expression:
             case "empty":
                 # Just evaluates to None
                 return None
+            case "execution":
+                # Should just run code
+                return None
             case _:
                 raise "Invalid expression type!"
             
-    def unpack_expression_chain(self, chain):
-        chain = unpack_list(chain)
-        if type(chain) == list:
-            for i in range(len(chain)):
-                chain[i] = self.unpack_expression_chain(chain[i])
-        elif type(chain) == Expression:
-            return chain.evaluate()
-        return purge_nones(unpack_list(chain))
-                    
+def unpack_expression_chain(chain):
+    chain = unpack_list(chain)
+    if type(chain) == list:
+        for i, elem in enumerate(chain):
+            chain[i] = unpack_expression_chain(elem)
+    elif type(chain) == Expression:
+        unpack_expression_chain(chain.args)
+        # return chain.evaluate()
+        return chain
+    return purge_nones(unpack_list(chain))
+
+def evaluate_children(args):
+    args = unpack_list(args)
+    if type(args) == list:
+        for i, arg in enumerate(args):
+            args[i] = evaluate_children(arg)
+        return purge_nones(unpack_list(args))
+    elif type(args) == Expression:
+        return args.evaluate()
+    return purge_nones(unpack_list(args))
+            
+def unpack_list(packed_list):
+    if type(packed_list) == list:
+        while len(packed_list) == 1 and type(packed_list[0]) == list:
+            packed_list = packed_list[0]
+        for i in packed_list:
+            unpack_list(i)
+    return packed_list
+
+def purge_nones(packed_list):
+    if (type(packed_list) == list):
+        return [purge_nones(i) for i in packed_list if purge_nones(i) != None]
+    return packed_list
+
 def execute(function, args):
     match function:
         case "cry":
@@ -82,16 +110,3 @@ def execute(function, args):
                 return "blah"
             else:
                 raise "Invalid type!"
-            
-def unpack_list(packed_list):
-    if type(packed_list) == list:
-        while len(packed_list) == 1 and type(packed_list[0]) == list:
-            packed_list = packed_list[0]
-        for i in packed_list:
-            unpack_list(i)
-    return packed_list
-
-def purge_nones(packed_list):
-    if (type(packed_list) == list):
-        return [purge_nones(i) for i in packed_list if i != None]
-    return packed_list

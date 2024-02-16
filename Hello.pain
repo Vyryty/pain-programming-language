@@ -1,4 +1,4 @@
 cry ("Hello world!", "Hello, hello, hello!"),
-cry("Yay, another one!")
+cry("Yay, another one!"),
 1 + 2 * 3
 (4 + 5) * 6
